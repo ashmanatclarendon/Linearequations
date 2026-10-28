@@ -25,7 +25,7 @@ header{display:flex;align-items:center;gap:8px}
   padding:7px 26px 7px 12px;background:var(--soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231d2433' fill='none' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 10px center;
   min-width:0;flex:1;max-width:230px;text-overflow:ellipsis}
 #prog{display:flex;gap:3px;margin-left:auto}
-#prog span{width:14px;height:6px;border-radius:3px;background:#e1e5ec;transition:background .3s}
+#prog span{width:5px;height:6px;border-radius:3px;background:#e1e5ec;transition:background .3s}
 #prog span.on{background:var(--green)}
 .icon{width:36px;height:36px;border-radius:50%;border:none;background:var(--soft);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;color:var(--navy)}
 .icon.down{transform:scale(.92)}
@@ -119,6 +119,7 @@ sup{font-size:.6em}
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute"><defs><marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1f3b57"/></marker></defs></svg>
+<audio id="capyAudio" preload="auto" playsinline src="./good-job.m4a"></audio>
 <div id="app">
   <header>
     <select id="levelSel" aria-label="Level"></select>
@@ -514,7 +515,7 @@ function parseOperand(t){let i=0;const us=[];
 /* ============================ APP / UI ============================ */
 if(typeof document!=='undefined'){
 const $=id=>document.getElementById(id);
-const PER_LEVEL=5;
+const PER_LEVEL=15;
 let st={level:1,count:0,struggle:{},seen:{}};
 try{Object.assign(st,JSON.parse(localStorage.getItem('eqsteps2')||'{}'))}catch(e){}
 const save=()=>{try{localStorage.setItem('eqsteps2',JSON.stringify(st))}catch(e){}};
@@ -675,16 +676,16 @@ function finish(){ // answer reached: check it against the original equation
   if(!ex)return win(false);
   prob.excl=true;nsPending=true;setGo('No solution',true);
   note(`Check: ${V(prob.v)} = ${join(polyTerms(pc(ex)))} makes a denominator zero in the original equation, so it can’t be a solution. Tap <b>No solution</b>.`,'tip')}
-function hideCapy(){capyTimers.forEach(clearTimeout);capyTimers=[];$('capyStage').className='';$('capy').setAttribute('class','');$('bubble').className='';
+function hideCapy(){const a=$('capyAudio');try{a.pause();a.currentTime=0}catch(e){}capyTimers.forEach(clearTimeout);capyTimers=[];$('capyStage').className='';$('capy').setAttribute('class','');$('bubble').className='';
   try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}}
 function showCapy(){
   const c=$('capy');$('capyStage').className='on';c.setAttribute('class','');void c.getBoundingClientRect();c.setAttribute('class','walk');
-  capyTimers.push(setTimeout(()=>{c.setAttribute('class','arrived');c.style.left='calc(50% - 110px)';$('bubble').className='on';deepVoice('Good job')},3450))}
+  capyTimers.push(setTimeout(()=>{c.setAttribute('class','arrived');c.style.left='calc(50% - 110px)';$('bubble').className='on';/* recorded audio began on the GO tap */},3450))}
 function win(ns){
   solved=true;setGo('NEXT ▶');
   const capy=!prob.shown&&!capyLast&&Math.random()<1/12; // the Easter egg: roughly 1 win in 12, never twice running
   capyLast=capy;
-  if(capy){$('capy').style.left='';showCapy()}else{ping();$('smileWrap').classList.add('show')}
+  if(capy){$('capy').style.left='';const a=$('capyAudio');try{a.pause();a.currentTime=0;const p=a.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}showCapy()}else{ping();$('smileWrap').classList.add('show')}
   const n=steps.length-1,lv=prob.lvl,slips=prob.tips+prob.undos+(prob.shown?2:0);
   st.struggle[lv]=slips?Math.min(6,(st.struggle[lv]||0)+slips):Math.max(0,(st.struggle[lv]||0)-1);
   const done=()=>st.count>=PER_LEVEL&&st.level<LEVELS.length?' Level complete 🎉':'';
@@ -705,12 +706,6 @@ newProblem(true);
 }
 if(typeof module!=='undefined')module.exports={q,S,Sbr,side,T,B,Fr,Fx,apply,nextStep,isSolved,generate,sideHtml,tipFor,parseOperand,excludedVal,LEVELS,lin,pc};
 </script>
-<script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  });
-}
-</script>
+<script>if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));}</script>
 </body>
 </html>

@@ -1,21 +1,11 @@
-# Equation Steps: GitHub Pages upload
+# Equation Steps v6 update
 
-Upload every file in this folder to the root of a public GitHub repository.
+This version requires **15 successful independent questions per level** instead of 5. Review questions still appear between current-level questions and do not count towards the 15. Worked examples using the lightbulb still do not count.
 
-1. On GitHub, create a new public repository, for example `equation-steps`.
-2. Choose **Add file > Upload files** and upload all files in this package.
-3. Open **Settings > Pages**.
-4. Under **Build and deployment**, choose **Deploy from a branch**.
-5. Select branch **main**, folder **/(root)**, then **Save**.
-6. Wait one or two minutes and open the GitHub Pages address shown on that screen.
+## Upload
+1. In the GitHub repository choose **Add file > Upload files**.
+2. Upload every file from this package and replace matching files.
+3. Commit the changes and wait for the Pages deployment green tick.
 
-## Install on iPhone
-
-1. Open the GitHub Pages address in Safari.
-2. Tap Share.
-3. Tap Add to Home Screen.
-4. Open Equation Steps once while online. It will then work offline.
-
-## Updating the app
-
-Replace `index.html` with the new version. Also change the CACHE value at the top of `sw.js`, for example from `equation-steps-v4-pwa-1` to `equation-steps-v4-pwa-2`. This makes installed phones download the update.
+## Refresh the iPhone
+Open the GitHub Pages site while online, refresh once, then close and reopen the installed app. The cache version is `equation-steps-v6-pwa-1`.
