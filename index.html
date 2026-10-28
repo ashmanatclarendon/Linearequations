@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Equations">
+<meta name="theme-color" content="#FFC000">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="Practise solving linear and literal equations one step at a time.">
+<title>Equation Steps</title>
+<style>
+:root{--ink:#1d2433;--muted:#8a93a3;--orange:#FFC000;--green:#3fa34d;--navy:#1f3b57;--u:#0a7d8c;--lit:#6a4cb8;--soft:#f2f4f8;
+  --math:"Cambria Math",Cambria,"STIX Two Math","Times New Roman",serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none;touch-action:manipulation;-webkit-user-select:none;-webkit-touch-callout:none;
+  background:#e8ecf2;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink)}
+#app{position:fixed;inset:0;max-width:430px;margin:0 auto;background:#fff;display:flex;flex-direction:column;
+  padding:max(10px,env(safe-area-inset-top)) 14px max(12px,env(safe-area-inset-bottom));user-select:none}
+header{display:flex;align-items:center;gap:8px}
+#levelSel{appearance:none;-webkit-appearance:none;font:600 14px system-ui,sans-serif;color:var(--ink);border:none;border-radius:999px;
+  padding:7px 26px 7px 12px;background:var(--soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231d2433' fill='none' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 10px center;
+  min-width:0;flex:1;max-width:230px;text-overflow:ellipsis}
+#prog{display:flex;gap:3px;margin-left:auto}
+#prog span{width:14px;height:6px;border-radius:3px;background:#e1e5ec;transition:background .3s}
+#prog span.on{background:var(--green)}
+.icon{width:36px;height:36px;border-radius:50%;border:none;background:var(--soft);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;color:var(--navy)}
+.icon.down{transform:scale(.92)}
+#topline{display:flex;align-items:center;justify-content:space-between;margin:12px 0 2px;min-height:46px}
+#input{min-width:150px;height:46px;background:var(--orange);border-radius:10px;display:flex;align-items:center;justify-content:flex-end;
+  padding:0 14px;font:22px var(--math);white-space:nowrap;box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)}
+#input small{font:14px system-ui,sans-serif}
+#input.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+#chip{font:600 12px system-ui,sans-serif;color:var(--lit);background:#f0ebfb;border-radius:999px;padding:4px 10px;display:none}
+#chip.on{display:block}
+#board{flex:1;overflow-y:auto;position:relative;scrollbar-width:none;min-height:110px;
+  -webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent)}
+#board::-webkit-scrollbar{display:none}
+.row{display:grid;grid-template-columns:62px 18px 1fr 24px 1fr 18px 62px;align-items:center}
+.row.eq{min-height:48px;font:23px var(--math)}
+.row.eq.new{animation:rise .35s ease-out}
+@keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1}}
+.row.eq.past{opacity:.45}
+.row.eq.done .expr{background:#e3f4dc;border-radius:8px;padding:1px 6px}
+.row.eq.bad .expr{background:#fdeaea;border-radius:8px;padding:1px 6px;text-decoration:line-through;text-decoration-color:#c33}
+.side{white-space:nowrap;min-width:0}.side.l{text-align:right}.side.r{text-align:left}
+.eqs{text-align:center}
+i.u{color:var(--u)}
+.row.step{height:34px;color:var(--navy)}
+.arr{width:18px;height:62px;margin:-14px 0;overflow:visible}
+.arr path{fill:none;stroke:var(--navy);stroke-width:1.6;stroke-dasharray:90}
+.row.step.new .arr path{animation:draw .45s ease-out both}
+@keyframes draw{from{stroke-dashoffset:90}to{stroke-dashoffset:0}}
+.row.step.new .lab{animation:fade .3s .2s both}
+@keyframes fade{from{opacity:0}}
+.lab{font:16px var(--math);white-space:nowrap}
+.lab.l{text-align:right;padding-right:2px}.lab.r{text-align:left;padding-left:2px}
+.lab small{font:italic 13px system-ui,sans-serif}
+.frac{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;font-size:.86em;margin:0 2px}
+.frac>.num{border-bottom:1.5px solid currentColor;padding:0 3px}.frac>.den{padding:0 3px}
+.pm{margin:0 .2em}
+sup{font-size:.6em}
+#feedback{height:100px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;text-align:center}
+#smileWrap{position:relative;display:none}
+#smileWrap.show{display:block;animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+#smileWrap.show::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:3px solid var(--green);animation:ring .8s ease-out .1s both}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes ring{from{transform:scale(.9);opacity:1}to{transform:scale(1.7);opacity:0}}
+#smiley{width:52px;height:52px;display:block}
+#capyStage{position:relative;width:100%;height:60px;display:none;overflow:visible}
+#capyStage.on{display:block}
+#capy{position:absolute;bottom:0;left:-130px;width:104px;height:64px}
+#capy.walk{animation:capyIn 3.4s linear forwards}
+@keyframes capyIn{to{left:calc(50% - 110px)}}
+#capy.walk .body{animation:bob .45s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-1.5px)}}
+#capy .lg{transform-box:fill-box;transform-origin:top center}
+#capy.walk .lg.a{animation:stepA .45s ease-in-out infinite}
+#capy.walk .lg.b{animation:stepB .45s ease-in-out infinite}
+@keyframes stepA{0%,100%{transform:rotate(14deg)}50%{transform:rotate(-14deg)}}
+@keyframes stepB{0%,100%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}}
+#capy.arrived .head{animation:nod .5s ease-in-out 2}
+@keyframes nod{50%{transform:rotate(6deg)}}
+#capy .head{transform-box:fill-box;transform-origin:20% 80%}
+#bubble{position:absolute;left:calc(50% + 2px);bottom:30px;background:#fff;border:2px solid var(--ink);border-radius:14px;padding:4px 10px;
+  font:700 16px system-ui,sans-serif;white-space:nowrap;opacity:0;transform:scale(.6);transform-origin:left bottom;transition:opacity .25s,transform .3s cubic-bezier(.3,1.6,.5,1)}
+#bubble::before{content:"";position:absolute;left:-9px;bottom:6px;border:7px solid transparent;border-right-color:var(--ink);border-left:0}
+#bubble.on{opacity:1;transform:scale(1)}
+#note{font-size:14px;line-height:1.35;padding:8px 12px;border-radius:12px;max-width:100%;display:none}
+#note.on{display:block;animation:fade .25s}
+#note.tip{background:#fff4d6;color:#6b4a00}
+#note.show{background:#e8f0fa;color:var(--navy)}
+#note.err{background:#fdeaea;color:#a12b2b}
+#note.good{background:#e6f4e2;color:#2b6a1d;font-weight:600}
+#note.info{background:var(--soft);color:#3b4354}
+#note i{font-family:var(--math);font-size:1.1em}
+#keys{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;width:100%}
+.key{height:44px;border:none;border-radius:10px;background:var(--soft);box-shadow:0 1px 0 #d5dbe5;font:21px var(--math);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;transition:transform .06s,background .15s}
+.key.down{transform:scale(.93);background:#e2e7ef}
+.key.op{background:#e6eef7;color:var(--navy)}
+.key.u{color:var(--u);font-style:italic}
+.key.lit{color:var(--lit);font-style:italic}
+.key.ctl{background:#f6f1e7;font:18px system-ui,sans-serif;color:#6b5a3a}
+.key.tool{grid-column:span 2;background:#eaf5e7;color:#2e6b1a;font:600 14px system-ui,sans-serif}
+.key.tool.side{font:italic 600 18px var(--math)}
+.key.sel{background:#ffe08a!important}
+.key.hide{visibility:hidden}
+.toolrow.gone{display:none}
+#go{margin:12px auto 0;width:62%;height:50px;border-radius:14px;border:none;background:var(--green);color:#fff;font:600 20px system-ui,sans-serif;
+  cursor:pointer;box-shadow:0 3px 0 #2c7a37;transition:transform .06s,background .2s}
+#go.ns{background:#c0504d;box-shadow:0 3px 0 #8f3532}
+#go.down{transform:translateY(2px);box-shadow:0 1px 0 #2c7a37}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs><marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1f3b57"/></marker></defs></svg>
+<div id="app">
+  <header>
+    <select id="levelSel" aria-label="Level"></select>
+    <span id="prog"></span>
+    <button class="icon" id="showBtn" title="Show me the next step">💡</button>
+    <button class="icon" id="newBtn" title="New equation">↻</button>
+  </header>
+  <div id="topline"><div id="input"></div><div id="chip"></div></div>
+  <div id="board"><div id="steps"></div></div>
+  <div id="feedback">
+    <div id="smileWrap"><svg id="smiley" viewBox="0 0 80 80"><circle cx="40" cy="40" r="38" fill="#000"/><circle cx="28" cy="31" r="6" fill="#fff"/><circle cx="52" cy="31" r="6" fill="#fff"/><path d="M22 48 Q40 64 58 48" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/></svg></div>
+    <div id="capyStage"><svg id="capy" viewBox="0 0 104 64" aria-label="capybara">
+      <g fill="#7a5230">
+        <rect class="lg a" x="22" y="44" width="7" height="17" rx="3"/><rect class="lg b" x="32" y="44" width="7" height="17" rx="3" fill="#6a4628"/>
+        <rect class="lg b" x="64" y="44" width="7" height="17" rx="3"/><rect class="lg a" x="74" y="44" width="7" height="17" rx="3" fill="#6a4628"/>
+      </g>
+      <g class="body">
+        <ellipse cx="50" cy="35" rx="38" ry="17" fill="#9c6b3f"/>
+        <ellipse cx="46" cy="28" rx="28" ry="8" fill="#ad7a4b" opacity=".6"/>
+        <g class="head">
+          <path d="M70 16 Q76 8 88 10 L99 15 Q104 20 101 28 L96 34 Q86 38 76 34 Q68 28 70 16Z" fill="#8e5f36"/>
+          <ellipse cx="78" cy="11" rx="4" ry="3.2" fill="#6a4628"/>
+          <circle cx="86" cy="18" r="2.1" fill="#1d1208"/>
+          <ellipse cx="99" cy="22" rx="2.2" ry="1.6" fill="#3a2614"/>
+          <path d="M93 29 q4 2 7 0" stroke="#3a2614" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+        </g>
+      </g></svg><div id="bubble">Good job!</div></div>
+    <div id="note"></div>
+  </div>
+  <div id="keys"></div>
+  <button id="go">GO</button>
+</div>
+
+<script>
+/* ============================ RATIONALS ============================ */
+const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a};
+const lcm=(a,b)=>a/gcd(a,b)*b;
+class Q{
+  constructor(n,d=1){if(d===0)throw new Error('div0');if(d<0){n=-n;d=-d}const g=gcd(n,d)||1;this.n=n/g;this.d=d/g}
+  add(o){return new Q(this.n*o.d+o.n*this.d,this.d*o.d)} sub(o){return this.add(o.neg())}
+  mul(o){return new Q(this.n*o.n,this.d*o.d)} div(o){return new Q(this.n*o.d,this.d*o.n)}
+  neg(){return new Q(-this.n,this.d)} abs(){return new Q(Math.abs(this.n),this.d)}
+  eq(o){return this.n===o.n&&this.d===o.d}
+  get zero(){return this.n===0} get one(){return this.n===1&&this.d===1} get isInt(){return this.d===1}
+}
+const q=(n,d=1)=>n instanceof Q?n:new Q(n,d);
+const Z=q(0),ONE=q(1);
+
+/* ===== POLYNOMIALS IN THE LITERALS a,b,c,d  —  {monomial: Q}, '' = constant ===== */
+const msort=s=>[...s].sort().join('');
+const pclean=p=>{const r={};for(const k in p)if(!p[k].zero)r[k]=p[k];return r};
+const padd=(a,b)=>{const r={...a};for(const k in b)r[k]=r[k]?r[k].add(b[k]):b[k];return pclean(r)};
+const pneg=a=>{const r={};for(const k in a)r[k]=a[k].neg();return r};
+const pmul=(a,b)=>{let r={};for(const i in a)for(const j in b)r=padd(r,{[msort(i+j)]:a[i].mul(b[j])});return r};
+const pscale=(a,c)=>{const r={};for(const k in a)r[k]=a[k].mul(c);return pclean(r)};
+const pzero=a=>!Object.keys(a).length;
+const nterms=a=>Object.keys(a).length;
+const pc=n=>pclean({'':q(n)});
+const pconst=a=>{const k=Object.keys(a);if(!k.length)return Z;return k.length===1&&k[0]===''?a['']:null};
+const pkey=a=>Object.keys(a).sort().map(k=>k+'='+a[k].n+'/'+a[k].d).join(',');
+const peq=(a,b)=>pkey(a)===pkey(b);
+function pratio(a,b){ // a = r·b ?  -> r
+  const kb=Object.keys(b);if(!kb.length)return null;if(pzero(a))return Z;if(nterms(a)!==kb.length)return null;
+  let r=null;for(const k of kb){if(!a[k])return null;const t=a[k].div(b[k]);if(r&&!r.eq(t))return null;r=t}return r}
+function monoDiv(m,d){const arr=[...m];for(const ch of d){const i=arr.indexOf(ch);if(i<0)return null;arr.splice(i,1)}return arr.join('')}
+function pdiv(a,b){ // exact a/b or null
+  if(pzero(a))return {};const r=pratio(a,b);if(r)return pc(r);
+  const kb=Object.keys(b);if(kb.length!==1)return null;const m=kb[0],cb=b[m],out={};
+  for(const k in a){const md=monoDiv(k,m);if(md===null)return null;out[md]=a[k].div(cb)}return out}
+function parsePoly(s){let r={};s=s.replace(/\s/g,'').replace(/−/g,'-');
+  for(const t of s.match(/[+-]?[^+-]+/g)||[]){const m=t.match(/^([+-]?)(\d*)([a-z]*)$/);
+    r=padd(r,{[msort(m[3])]:q((m[1]==='-'?-1:1)*(m[2]?+m[2]:1))})}return r}
+const toP=v=>v instanceof Q?pclean({'':v}):typeof v==='number'?pc(v):typeof v==='string'?parsePoly(v):v;
+function pcontent(polys){ // greatest common monomial factor
+  let n=0,d=1,letters=null,allNeg=true,count=0;
+  for(const p of polys)for(const k in p){count++;const c=p[k];n=gcd(n,c.n);d=lcm(d,c.d);if(c.n>0)allNeg=false;
+    if(letters===null)letters=[...k];else{const arr=[...k],keep=[];for(const ch of letters){const i=arr.indexOf(ch);if(i>=0){keep.push(ch);arr.splice(i,1)}}letters=keep}}
+  if(!count)return pc(1);return {[letters.join('')]:q(allNeg?-n:n,d)}}
+
+/* ===== LINEAR IN THE UNKNOWN:  x·X + C  (X, C polynomials) ===== */
+const lin=(x,c)=>({x:toP(x),c:toP(c)});
+const ladd=(a,b)=>({x:padd(a.x,b.x),c:padd(a.c,b.c)});
+const lmul=(a,P)=>({x:pmul(a.x,P),c:pmul(a.c,P)});
+const lneg=a=>({x:pneg(a.x),c:pneg(a.c)});
+const lzero=a=>pzero(a.x)&&pzero(a.c);
+const lterms=a=>nterms(a.x)+nterms(a.c);
+const lkey=L=>pkey(L.x)+';'+pkey(L.c);
+const lcomb=L=>{const r={};for(const k in L.x)r['#'+k]=L.x[k];for(const k in L.c)r[k]=L.c[k];return r};
+const lratio=(D,f)=>pratio(lcomb(D),lcomb(f));
+
+/* ===== A SIDE = list of parts.  part = k·(in) / (den · xden)
+   den: factors free of the unknown;  xden: factors containing the unknown;
+   br: bracket shown;  xf: unknown factored out ===== */
+const T=(x,c)=>({br:false,xf:false,k:pc(1),in:lin(x,c),den:[],xden:[]});
+const B=(k,x,c)=>({br:true,xf:false,k:toP(k),in:lin(x,c),den:[],xden:[]});
+const Fr=(x,c,den)=>({...T(x,c),den:[toP(den)]});
+const Fx=(x,c,...fs)=>({...T(x,c),xden:fs.map(f=>lin(f[0],f[1]))});
+const cl=p=>({...p,in:{...p.in},den:[...p.den],xden:[...p.xden]});
+const denKey=p=>p.den.map(pkey).sort().join('#')+'|'+p.xden.map(lkey).sort().join('#');
+function normPart(p){
+  p=cl(p);
+  for(let i=p.den.length-1;i>=0;i--){const f=p.den[i];
+    if(p.br){const d=pdiv(p.k,f);if(d){p.k=d;p.den.splice(i,1)}}
+    else{const dx=pdiv(p.in.x,f),dc=pdiv(p.in.c,f);if(dx&&dc){p.in={x:dx,c:dc};p.den.splice(i,1)}}}
+  if(p.br){if(pzero(p.k)||lzero(p.in))return null;const kc=pconst(p.k);
+    if((kc&&kc.one)||lterms(p.in)<=1)p={...p,br:false,k:pc(1),in:lmul(p.in,p.k)}}
+  if(!p.br&&lzero(p.in))return null;
+  if(nterms(p.in.x)<2)p.xf=false;
+  return p}
+function normSide(s){const out=[];
+  for(const p0 of s){const p=normPart(p0);if(!p)continue;
+    if(!p.br){const j=out.findIndex(o=>!o.br&&denKey(o)===denKey(p));
+      if(j>=0){const o=out[j],m=normPart({...o,in:ladd(o.in,p.in),xf:o.xf&&pzero(p.in.x)});if(m)out[j]=m;else out.splice(j,1);continue}}
+    out.push(p)}
+  return out}
+const side=(...parts)=>normSide(parts);
+const S=(a=0,b=0)=>side(T(a,b));
+const Sbr=(m,ia,ib,a=0,b=0)=>side(B(m,ia,ib),T(a,b));
+
+function sAdd(s,L){return normSide([...s,{br:false,xf:false,k:pc(1),in:L,den:[],xden:[]}])}
+function sMul(s,P){const pcst=!!pconst(P);
+  return normSide(s.map(p0=>{const p=cl(p0);let F=P;const i=p.den.findIndex(f=>pratio(P,f));
+    if(i>=0){F=pc(pratio(P,p.den[i]));p.den.splice(i,1)}
+    if(p.br)p.k=pmul(p.k,F);else{p.in=lmul(p.in,F);if(!pcst&&!pconst(F))p.xf=false}return p}))}
+function sMulX(s,D){ // multiply by an expression containing the unknown — only sensible when it cancels a denominator
+  let m=false,err=false;const out=[];
+  for(const p0 of s){const p=cl(p0);const i=p.xden.findIndex(f=>lratio(D,f));
+    if(i>=0){const r=lratio(D,p.xden[i]);p.xden.splice(i,1);if(p.br)p.k=pscale(p.k,r);else p.in=lmul(p.in,pc(r));m=true;out.push(p);continue}
+    if(!pzero(p.in.x)){err=true;continue}
+    out.push({...p,br:true,xf:false,k:p.br?pmul(p.k,p.in.c):p.in.c,in:{...D}})}
+  return {s:normSide(out),m,err}}
+function sDiv(s,P){const c=pconst(P);if(c)return sMul(s,pc(ONE.div(c)));
+  return normSide(s.map(p0=>{const p=cl(p0);
+    if(p.br){const d=pdiv(p.k,P);if(d){p.k=d;return p}}
+    else{const dx=pdiv(p.in.x,P),dc=pdiv(p.in.c,P);if(dx&&dc){p.in={x:dx,c:dc};return p}}
+    const ks=Object.keys(P);
+    if(ks.length===1&&!P[ks[0]].one){const r=ONE.div(P[ks[0]]);if(p.br)p.k=pscale(p.k,r);else p.in=lmul(p.in,pc(r));p.den.push({[ks[0]]:ONE})}
+    else p.den.push(P);
+    return p}))}
+function sExp(s){if(!s.some(p=>p.br||p.xf))return 'There are no brackets to expand on that side.';
+  return normSide(s.map(p=>p.br?{...cl(p),br:false,xf:false,k:pc(1),in:lmul(p.in,p.k)}:{...cl(p),xf:false}))}
+function sFac(s,v){
+  if(s.length!==1)return s.some(p=>p.br)?'That side is already factorised.':'That side has separate parts, so it can’t be factorised as a whole.';
+  const p=s[0];if(p.xden.length)return 'Clear the denominator first.';
+  if(p.br||p.xf)return 'That side is already factorised.';
+  if(nterms(p.in.x)>=2){if(pzero(p.in.c))return [{...cl(p),xf:true}];
+    return `Only the ${V(v)}-terms share the factor ${V(v)}. Move the other term to the other side first.`}
+  if(lterms(p.in)<2)return 'There is only one term on that side — nothing to factorise.';
+  const g=pcontent([p.in.x,p.in.c]);if(peq(g,pc(1)))return 'Those terms have no common factor.';
+  return normSide([{...cl(p),br:true,k:g,in:{x:pdiv(p.in.x,g),c:pdiv(p.in.c,g)}}])}
+
+const hasX=s=>s.some(p=>!pzero(p.in.x)||p.xden.length);
+const alone=s=>s.length===1&&!s[0].br&&!s[0].den.length&&!s[0].xden.length&&pzero(s[0].in.c)&&peq(s[0].in.x,pc(1));
+const isSolved=e=>(alone(e.L)&&!hasX(e.R))||(alone(e.R)&&!hasX(e.L));
+const allQ=e=>[...e.L,...e.R].flatMap(p=>[...Object.values(p.k),...Object.values(p.in.x),...Object.values(p.in.c),
+  ...p.den.flatMap(f=>Object.values(f)),...p.xden.flatMap(f=>[...Object.values(f.x),...Object.values(f.c)])]);
+const allInt=e=>allQ(e).every(x=>x.isInt)&&![...e.L,...e.R].some(p=>p.den.length);
+const tooBig=e=>allQ(e).some(x=>Math.abs(x.n)>99999||x.d>9999)||allQ(e).length>16;
+const xsideOf=e=>{const l=hasX(e.L),r=hasX(e.R);return l&&!r?'L':r&&!l?'R':null};
+const xcoef=s=>s.reduce((P,p)=>padd(P,p.br?pmul(p.in.x,p.k):p.in.x),{});
+const constPart=s=>{const p=s.find(p=>!p.br&&!p.den.length&&!p.xden.length);return p?p.in.c:{}};
+function excludedVal(e0,ef){ // does the final answer make a denominator in the ORIGINAL equation zero?
+  const s=alone(ef.L)?ef.R:ef.L;let val=null;
+  if(!s.length)val=Z;else if(s.length===1&&!s[0].br&&!s[0].den.length&&!s[0].xden.length&&pzero(s[0].in.x))val=pconst(s[0].in.c);
+  if(!val)return null;
+  for(const p of [...e0.L,...e0.R])for(const f of p.xden){const fx=pconst(f.x),fc=pconst(f.c);if(fx&&fc&&fx.mul(val).add(fc).zero)return val}
+  return null}
+
+/* ============================ RENDERING ============================ */
+const V=v=>`<i class="u">${v}</i>`;
+const frac=(n,d)=>`<span class="frac"><span class="num">${n}</span><span class="den">${d}</span></span>`;
+function monoHtml(m){let h='',i=0;while(i<m.length){let j=i;while(m[j]===m[i])j++;h+=`<i>${m[i]}</i>`+(j-i>1?`<sup>${j-i}</sup>`:'');i=j}return h}
+function termHtml(c,mono,v){const lit=monoHtml(mono)+(v?V(v):'');const num=(c.n===1&&lit?'':String(c.n))+lit;return c.d===1?num:frac(num,c.d)}
+const tcmp=P=>(a,b)=>((P[b].n>0)-(P[a].n>0))||((a===''?1:0)-(b===''?1:0))||(a<b?-1:a>b?1:0);
+const polyTerms=(P,v)=>Object.keys(P).sort(tcmp(P)).map(k=>({neg:P[k].n<0,h:termHtml(P[k].abs(),k,v)}));
+function join(t){if(!t.length)return '0';return t.map((x,i)=>i===0?(x.neg?'−':'')+x.h:`<span class="pm">${x.neg?'−':'+'}</span>${x.h}`).join('')}
+function linTerms(L,v,xf){const t=[];
+  if(xf&&nterms(L.x)>1)t.push({neg:false,h:V(v)+'('+join(polyTerms(L.x))+')'});else t.push(...polyTerms(L.x,v));
+  t.push(...polyTerms(L.c));return t}
+const coefHtml=P=>nterms(P)>1?'('+join(polyTerms(P))+')':join(polyTerms(P));
+function denHtml(n,facs,xf,v){const it=[];if(n!==1)it.push({h:String(n),m:false});
+  for(const f of facs)it.push({h:join(polyTerms(f)),m:nterms(f)>1});
+  for(const f of xf){const t=linTerms(f,v,false);it.push({h:join(t),m:t.length>1})}
+  const multi=it.length>1;return it.map(i=>multi&&i.m?'('+i.h+')':i.h).join('')}
+function partTerms(p,v){
+  if(p.br){const inner=join(linTerms(p.in,v,false)),kk=Object.keys(p.k);let neg=false,pre,dn=1;
+    if(kk.length===1){const c=p.k[kk[0]];neg=c.n<0;dn=c.d;pre=(Math.abs(c.n)===1?'':Math.abs(c.n))+monoHtml(kk[0])}
+    else pre='('+join(polyTerms(p.k))+')';
+    if(dn===1&&!p.den.length&&!p.xden.length)return [{neg,h:pre+'('+inner+')'}];
+    return [{neg,h:frac(pre?pre+'('+inner+')':inner,denHtml(dn,p.den,p.xden,v))}]}
+  if(!p.den.length&&!p.xden.length)return linTerms(p.in,v,p.xf);
+  let t=linTerms(p.in,v,p.xf),neg=false;if(t.length===1&&t[0].neg){neg=true;t=[{...t[0],neg:false}]}
+  return [{neg,h:frac(join(t),denHtml(1,p.den,p.xden,v))}]}
+const sideHtml=(s,v)=>join(s.flatMap(p=>partTerms(p,v)));
+function operandHtml(L,v){const t=linTerms(L,v,false);if(t.length===1)return t[0].neg?'(−'+t[0].h+')':t[0].h;return '('+join(t)+')'}
+const SYM={'+':'+','−':'−','×':'×','÷':'÷'};
+
+/* ============================ APPLYING A MOVE ============================ */
+function apply(eq,a,v){let L=eq.L,R=eq.R;const label={L:null,R:null};
+  if(a.type==='exp'||a.type==='fac'){const s=a.side==='L'?L:R;const r=a.type==='exp'?sExp(s):sFac(s,v);
+    if(typeof r==='string')return r;if(a.side==='L')L=r;else R=r;label[a.side]=`<small>${a.type==='exp'?'expand':'factorise'}</small>`}
+  else{const X=a.lin;
+    if(a.op==='+'){L=sAdd(L,X);R=sAdd(R,X)}
+    if(a.op==='−'){L=sAdd(L,lneg(X));R=sAdd(R,lneg(X))}
+    if(a.op==='×'&&!pzero(X.x)){const l=sMulX(L,X),r=sMulX(R,X);
+      if(!l.m&&!r.m)return `Only multiply by an expression containing ${V(v)} when it clears ${V(v)} from a denominator.`;
+      if(l.err||r.err)return `That would create an ${V(v)}<sup>2</sup> term — not needed here.`;
+      L=l.s;R=r.s}
+    else if(a.op==='×'){L=sMul(L,X.c);R=sMul(R,X.c)}
+    if(a.op==='÷'){L=sDiv(L,X.c);R=sDiv(R,X.c)}
+    label.L=label.R=SYM[a.op]+'&thinsp;'+operandHtml(X,v)}
+  const e={L,R};if(tooBig(e))return 'The numbers are getting very large — try ↶ to undo.';
+  return {eq:e,label}}
+
+/* ============================ WORKED-STEP SOLVER (for 💡) ============================ */
+const opA=(op,L)=>({type:'op',op,lin:L});
+function removeConst(c){const t=polyTerms(c);
+  if(t.length===1&&t[0].neg)return {a:opA('+',{x:{},c:pneg(c)}),say:`Add ${t[0].h} to both sides to remove the −${t[0].h}.`};
+  if(t.length===1)return {a:opA('−',{x:{},c}),say:`Subtract ${t[0].h} from both sides to remove the +${t[0].h}.`};
+  return {a:opA('−',{x:{},c}),say:`Subtract ${coefHtml(c)} from both sides.`}}
+function clearDen(e){let n=1;const facs=[],seen=new Set();
+  for(const p of [...e.L,...e.R]){for(const x of [...Object.values(p.k),...Object.values(p.in.x),...Object.values(p.in.c)])n=lcm(n,x.d);
+    for(const f of p.den){const k=pkey(f);if(!seen.has(k)){seen.add(k);facs.push(f)}}}
+  if(n===1&&!facs.length)return null;return facs.reduce(pmul,pc(n))}
+function nextStep(e,v){if(isSolved(e))return null;const X=V(v);
+  const lx=hasX(e.L),rx=hasX(e.R),nm=k=>k==='L'?'left':'right';
+  const xd=['L','R'].find(k=>e[k].some(p=>p.xden.length));
+  if(xd){const s=e[xd];
+    if(s.length>1){const p=s.find(p=>!p.br&&!p.den.length&&!p.xden.length&&pzero(p.in.x)&&!pzero(p.in.c));
+      if(p){const m=removeConst(p.in.c);return {a:m.a,say:'Get the fraction on its own first. '+m.say}}}
+    const f=s.find(p=>p.xden.length).xden[0];
+    return {a:opA('×',f),say:`${X} is in a denominator. Multiply both sides by ${operandHtml(f,v)} to clear it.`}}
+  if(lx&&rx){
+    const D=clearDen(e);if(D)return {a:opA('×',{x:{},c:D}),say:`Multiply both sides by ${coefHtml(D)} to clear the fractions.`};
+    for(const k of ['L','R'])if(e[k].some(p=>p.br||p.xf))return {a:{type:'exp',side:k},say:`Expand the brackets on the ${nm(k)} first.`};
+    const cL=xcoef(e.L),cR=xcoef(e.R),nL=pconst(cL),nR=pconst(cR);let sub,why='';
+    if(nL&&nR){sub=nL.sub(nR).n>0?cR:cL;why=` — the smaller ${X}-term — so the ${X}-term stays positive`}
+    else sub=(!nL&&nR)?cL:cR; // otherwise subtract the letter-coefficient term
+    const t=polyTerms(sub,v);
+    if(t.length===1&&t[0].neg)return {a:opA('+',{x:pneg(sub),c:{}}),say:`${X} is on both sides. Add ${t[0].h} to both sides${why}.`};
+    return {a:opA('−',{x:sub,c:{}}),say:`${X} is on both sides. Subtract ${operandHtml({x:sub,c:{}},v)} from both sides${why||` to collect the ${X}-terms together`}.`}}
+  const Sd=lx?'L':'R',s=e[Sd],O=e[Sd==='L'?'R':'L'];
+  if(s.length>1){const p=s.find(p=>!p.br&&!p.den.length&&!pzero(p.in.c)&&pzero(p.in.x))||s.find(p=>!p.br&&!p.den.length&&!pzero(p.in.c));
+    if(p)return removeConst(p.in.c);
+    const D=s.some(p=>p.den.length)&&clearDen(e);if(D)return {a:opA('×',{x:{},c:D}),say:`Multiply both sides by ${coefHtml(D)} to clear the fractions.`};
+    return {a:{type:'exp',side:Sd},say:'Expand the brackets first.'}}
+  const p=s[0];
+  if(p.den.length){const D=p.den.reduce(pmul,pc(1));return {a:opA('×',{x:{},c:D}),say:`Multiply both sides by ${coefHtml(D)} to clear the fraction.`}}
+  if(p.br){const k=pconst(p.k);
+    if(k){if(!k.isInt)return {a:opA('×',{x:{},c:pc(k.d)}),say:`Multiply both sides by ${k.d} to clear the fraction.`};
+      const o=O.length===1&&!O[0].br&&!O[0].den.length&&pzero(O[0].in.x)?pconst(O[0].in.c):(O.length===0?Z:null);
+      if(o&&o.isInt&&o.n%k.n===0)return {a:opA('÷',{x:{},c:pc(k)}),say:`Divide both sides by ${operandHtml({x:{},c:pc(k)},v)} — the whole bracket is multiplied by ${k.n<0?'−'+(-k.n):k.n}.`};
+      return {a:{type:'exp',side:Sd},say:`Expand the brackets (${k.n} doesn’t divide evenly into the other side).`}}
+    return {a:opA('÷',{x:{},c:p.k}),say:`Divide both sides by ${coefHtml(p.k)} — the whole bracket is multiplied by ${coefHtml(p.k)}.`}}
+  if(!pzero(p.in.c))return removeConst(p.in.c);
+  const K=p.in.x;
+  if(nterms(K)>1&&!p.xf)return {a:{type:'fac',side:Sd},say:`Both terms contain ${X}. Factorise: take ${X} out as a common factor.`};
+  const kc=pconst(K);
+  if(kc&&!kc.isInt)return {a:opA('×',{x:{},c:pc(kc.d)}),say:`Multiply both sides by ${kc.d} to clear the fraction.`};
+  const Kh=coefHtml(K);
+  return {a:opA('÷',{x:{},c:K}),say:`Divide both sides by ${kc?operandHtml({x:{},c:K},v):Kh} — ${X} is being multiplied by ${Kh}.`+(kc?'':` <small>(This assumes ${Kh} ≠ 0.)</small>`)}}
+
+/* ============================ FEEDBACK ON COMMON SLIPS ============================ */
+function tipFor(before,after,a,v){
+  if(a.type!=='op')return null;const X=V(v),Sd=xsideOf(before),Sa=xsideOf(after);
+  const xdS=['L','R'].find(k=>before[k].some(p=>p.xden.length));
+  if(xdS){if((a.op==='×'||a.op==='÷')&&pzero(a.lin.x)&&allInt(before)){const f=before[xdS].find(p=>p.xden.length).xden[0];
+      return `${X} is in the denominator. To bring it up, multiply both sides by ${operandHtml(f,v)}.`}
+    return null}
+  if((a.op==='+'||a.op==='−')&&!pzero(a.lin.x)){
+    if(Sd&&!Sa&&hasX(after.L)&&hasX(after.R))return `That has put ${X} on both sides. Tap ↶ to undo it.`;
+    const posB=['L','R'].some(k=>{const c=pconst(xcoef(before[k]));return c&&c.n>0});
+    if(Sa&&posB&&!Sd){const c=pconst(xcoef(after[Sa]));if(c&&c.n<0)return `Allowed — but try to keep the ${X}-term positive. Subtract the <b>smaller</b> ${X}-term instead.`}
+    return null}
+  if(!Sd)return null;const sb=before[Sd],c0=constPart(sb);
+  if(a.op==='+'||a.op==='−'){const t=a.op==='−'?pneg(a.lin.c):a.lin.c;
+    if(!pzero(c0)&&!pzero(t)){const r=pratio(t,c0);if(r&&r.n>0){const ct=polyTerms(c0);
+      if(ct.length===1)return `To remove the ${ct[0].neg?'−':'+'}${ct[0].h}, do the opposite: <b>${ct[0].neg?'add':'subtract'}</b> ${ct[0].h}.`;
+      return 'To remove a term, do the opposite operation.'}}
+    return null}
+  const single=sb.length===1&&!sb[0].br&&!sb[0].den.length&&!sb[0].xden.length,kz=single&&pzero(sb[0].in.c),K=single?sb[0].in.x:null;
+  if(a.op==='×'&&kz&&!peq(K,pc(1))){const Kc=pconst(K);
+    if((Kc&&Kc.isInt&&Math.abs(Kc.n)>1)||(!Kc&&pratio(a.lin.c,K)))return `${X} is being multiplied by ${coefHtml(K)}. To undo that, <b>divide</b> by ${coefHtml(K)}.`}
+  if(a.op==='÷'){
+    const madeFrac=(allInt(before)&&!allInt(after))||(!sb.some(p=>p.den.length)&&after[Sd].some(p=>p.den.length));
+    if(!pzero(c0)&&madeFrac){const ct=polyTerms(c0);const h=ct.length===1?(ct[0].neg?'−':'+')+ct[0].h:'constant term';
+      return `Allowed — but it has made fractions. Removing the ${h} first keeps things simpler. (↶ undoes)`}
+    if(kz){const Ka=pconst(xcoef(after[Sd]));if((Ka&&!Ka.isInt)||after[Sd].some(p=>p.den.length))return `To get ${X} on its own, divide by its whole coefficient, ${coefHtml(K)}.`}}
+  return null}
+
+/* ============================ PROBLEM GENERATORS ============================ */
+const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const nz=(a,b)=>{let x;do{x=ri(a,b)}while(x===0);return x};
+const pick=a=>a[ri(0,a.length-1)];
+const P=(L,R,swapP=0)=>Math.random()<swapP?{L:R,R:L}:{L,R};
+const LEVELS=[
+ {name:'One-step',tools:0,intro:'Choose an operation and a number, then <b>GO</b>. Whatever you do happens to both sides.',gen(){
+   const t=ri(0,2);
+   if(t===0){const a=ri(1,12),s=ri(1,12);return P(S(1,a),S(0,s+a))}
+   if(t===1){const a=ri(1,9),s=a+ri(1,10);return P(S(1,-a),S(0,s-a))}
+   const a=ri(2,9),s=ri(1,10);return P(S(a,0),S(0,a*s))}},
+ {name:'Two-step',tools:0,gen(){let a=ri(2,9);const b=nz(-12,12),s=ri(1,10);if(Math.random()<.2)a=-a;return P(S(a,b),S(0,a*s+b),.25)}},
+ {name:'Unknowns on both sides',tools:0,intro:'The unknown is on both sides now. Try to keep the unknown term <b>positive</b>.',gen(){
+   let a,c;do{a=ri(1,9);c=ri(1,9)}while(a===c);const s=nz(-6,10),b=nz(-12,12),d=(a-c)*s+b;return P(S(a,b),S(c,d))}},
+ {name:'Brackets',tools:1,intro:'New: <b>exp</b> then <b>L</b> or <b>R</b> expands the brackets on that side.',gen(){
+   const t=ri(0,3),s=nz(-4,10);
+   if(t===0){const a=ri(2,9),b=nz(-9,9);return P(Sbr(a,1,b),S(0,a*(s+b)),.25)}
+   if(t===1){const a=ri(2,6),b=nz(-9,9),d=nz(-12,12);return P(Sbr(a,1,b,0,d),S(0,a*(s+b)+d),.25)}
+   if(t===2){const g=ri(2,6),p=ri(1,4),r=nz(-8,8);return P(S(g*p,g*r),S(0,g*(p*s+r)),.25)}
+   const a=ri(2,5),p=ri(2,4),r=nz(-6,6);return P(Sbr(a,p,r),S(0,a*(p*s+r)),.25)}},
+ {name:'Brackets on both sides',tools:1,gen(){
+   for(let i=0;i<500;i++){let a,c;do{a=ri(2,8);c=ri(1,8)}while(a===c);const s=nz(-5,10),b=nz(-8,8);
+     if(Math.random()<.5){const num=a*(s+b);if(num%c)continue;const d=num/c-s;if(!d)continue;return P(Sbr(a,1,b),Sbr(c,1,d))}
+     return P(Sbr(a,1,b),S(c,a*(s+b)-c*s),.4)}
+   return P(Sbr(2,1,3),Sbr(4,1,-1))}},
+ {name:'Fractions',tools:1,intro:'Fractions: multiplying both sides clears a denominator.',gen(){
+   const t=ri(0,4);
+   if(t===0){const a=ri(2,6),s=a*ri(1,8),b=nz(-9,9);return P(S(q(1,a),b),S(0,s/a+b),.25)}
+   if(t===1){const a=ri(2,6),k=nz(-3,8),b=nz(-9,9);return P(Sbr(q(1,a),1,b),S(0,k),.25)}
+   if(t===2){let p,d;do{p=ri(2,5);d=ri(2,6)}while(gcd(p,d)!==1);const s=d*ri(1,6);return P(S(q(p,d),0),S(0,p*s/d),.25)}
+   if(t===3){const a=ri(2,6),k=nz(-3,8),b=nz(-9,9),d=nz(-9,9);return P(Sbr(q(1,a),1,b,0,d),S(0,k+d),.25)}
+   let p,a,b,s,k;do{p=ri(2,5);a=ri(2,6);s=nz(-4,8);k=nz(-5,9);b=a*k-p*s}while(!b||gcd(p,a)===a);
+   return P(Sbr(q(1,a),p,b),S(0,k),.25)}},
+ {name:'Fractions on both sides',tools:1,gen(){
+   if(Math.random()<.55){let a,c;do{a=ri(2,6);c=ri(2,6)}while(a===c);const s=nz(-6,10),k=nz(-5,6);
+     return P(Sbr(q(1,a),1,a*k-s),Sbr(q(1,c),1,c*k-s))}
+   let p,c;do{p=ri(2,5);c=ri(2,5)}while(p===c);const s=nz(-5,8),d=nz(-6,6),b=c*(s+d)-p*s;
+   return P(Sbr(q(1,c),p,b),S(1,d),.4)}},
+ {name:'Unknown in the denominator',tools:1,paren:true,intro:'New: the unknown is in a denominator. Multiply both sides by that denominator to clear it — use <b>( )</b> for a bracket, e.g. × (<i>x</i> + 2).',gen(){
+   const t=ri(0,2);
+   if(t===0){const s=ri(1,9),c=ri(2,9);return P(side(Fx(0,c*s,[1,0])),S(0,c),.3)}
+   if(t===1){const tt=ri(1,6),p=nz(-6,6),c=nz(-4,6);return P(side(Fx(0,c*tt,[1,p])),S(0,c),.3)}
+   for(;;){const c=ri(2,4),s=nz(-5,8),qq=nz(-6,6);if(s+qq===0)continue;const p=c*(s+qq)-s;if(p===qq)continue;return P(side(Fx(1,p,[1,qq])),S(0,c),.3)}}},
+ {name:'Unknown in two denominators',tools:1,paren:true,intro:'Clear the denominators one at a time. Occasionally the answer makes a denominator zero in the original equation — then there is <b>no solution</b>.',gen(){
+   const t=pick([0,1,2,2,3]);
+   if(t===0)for(;;){const m=ri(1,9),n=ri(1,9),p=nz(-6,6);if(m===n||(m*p)%(n-m))continue;const s=m*p/(n-m);if(!s||s+p===0)continue;
+     return P(side(Fx(0,m,[1,0])),side(Fx(0,n,[1,p])))}
+   if(t===1)for(;;){const m=ri(1,9),n=ri(1,9),p=nz(-6,6),qq=nz(-6,6);if(m===n||p===qq||(n*p-m*qq)%(m-n))continue;const s=(n*p-m*qq)/(m-n);if(s+p===0||s+qq===0)continue;
+     return P(side(Fx(0,m,[1,qq])),side(Fx(0,n,[1,p])))}
+   if(t===2){const tt=ri(1,6),d=nz(-5,5),b=nz(-9,9),p=pick([0,nz(-5,5)]);return P(side(Fx(0,d*tt,[1,p]),T(0,b)),S(0,b+d),.25)}
+   const m=ri(2,4),p=ri(1,6),r=ri(0,4);return P(side(Fx(1,r,[1,-p])),side(Fx(0,p+r,[1,-p]),T(0,m)),.25)}},
+ {name:'Literal equations',tools:1,lits:true,intro:'Now the letters <i>a</i>, <i>b</i>, <i>c</i>, <i>d</i> stand for numbers. Solve for the unknown — your answer will contain letters. Use <b>( )</b> to divide by a whole expression.',gen(){
+   const n=nz(-9,9),m=ri(2,9),sg=pick(['','-']);
+   switch(ri(0,9)){
+    case 0:return P(S('a',0),S(0,'b'),.3);
+    case 1:return P(S(1,sg+'a'),S(0,'b'),.3);
+    case 2:return P(S('a','b'),S(0,'c'),.25);
+    case 3:return P(S('a','-b'),S(0,'c'),.25);
+    case 4:return P(Sbr('a',1,sg+'b'),S(0,'c'),.25);
+    case 5:return P(side(Fr(1,0,'a')),S(0,'b'),.25);
+    case 6:return P(side(Fr(1,sg+'b','a')),S(0,'c'),.25);
+    case 7:return P(side(Fr(1,0,'a'),T(0,'b')),S(0,'c'),.25);
+    case 8:return P(S('a',n),S(0,'b'),.25);
+    default:return P(S(m,sg+'a'),S(0,'b'),.25)}}},
+ {name:'Literal equations: factorising',tools:2,lits:true,intro:'New: <b>fac</b> then <b>L</b> or <b>R</b> takes the unknown out as a common factor — needed when its coefficient is a sum of letters.',gen(){
+   const n=nz(-9,9),m=ri(2,5);
+   switch(ri(0,7)){
+    case 0:return P(S('a+b',0),S(0,'c'),.25);
+    case 1:return P(S('a',0),S('b','c'));
+    case 2:return P(S('a','b'),S('c','d'));
+    case 3:return P(S('a',n),S(m,'b'));
+    case 4:return P(Sbr('a',1,'b'),S('c',0));
+    case 5:return P(S('a','-c'),S('b',0));
+    case 6:return P(S('a','b'),S(1,'c'));
+    default:return P(Sbr('a',1,'-b'),Sbr('c',1,'d'))}}},
+ {name:'Formulas',tools:2,lits:true,intro:'The unknown is in a denominator again. Clear it, then rearrange. 1/<i>x</i> = 1/<i>a</i> + 1/<i>b</i> has the same shape as resistors in parallel.',gen(){
+   switch(ri(0,4)){
+    case 0:return P(side(Fx(0,'a',[1,0])),S(0,'b'),.3);
+    case 1:return P(side(Fx(0,'a',[1,'b'])),S(0,'c'),.3);
+    case 2:return P(side(Fx(0,1,[1,0])),side(Fr(0,1,'a'),Fr(0,1,'b')));
+    case 3:return P(side(Fx(0,'a',[1,0]),T(0,'b')),S(0,'c'),.3);
+    default:return P(side(Fx(1,0,[1,'a'])),S(0,'b'),.3)}}},
+];
+function generate(level){const L=LEVELS[level-1];
+  for(let i=0;i<50;i++){const e=L.gen();if(!isSolved(e))return {v:level===1?'x':(Math.random()<.3?'y':'x'),eq:e}}
+  return {v:'x',eq:{L:S(2,1),R:S(0,7)}}}
+
+/* ============================ PARSING THE TYPED OPERAND ============================ */
+function parseOperand(t){let i=0;const us=[];
+  function term(sign){let num='';while(i<t.length&&/\d/.test(t[i]))num+=t[i++];let mono='';while(i<t.length&&/[a-d]/.test(t[i]))mono+=t[i++];
+    let u=null;if(t[i]==='x'||t[i]==='y'){u=t[i++];us.push(u)}
+    if(!num&&!mono&&!u)throw 'Finish typing the term first.';
+    const P={[msort(mono)]:q(sign*(num?parseInt(num,10):1))};return u?{x:P,c:{}}:{x:{},c:P}}
+  let L;
+  if(t[0]==='('){i=1;L={x:{},c:{}};let first=true;
+    while(i<t.length&&t[i]!==')'){let sign=1;if(t[i]==='+'||t[i]==='−'){sign=t[i]==='−'?-1:1;i++}else if(!first)throw 'Something is missing inside the brackets.';
+      L=ladd(L,term(sign));first=false}
+    if(first)throw 'The brackets are empty.';if(t[i]===')')i++}
+  else L=term(1);
+  if(i<t.length)throw 'Type one term — or put the expression in brackets.';
+  return {lin:L,us}}
+
+/* ============================ APP / UI ============================ */
+if(typeof document!=='undefined'){
+const $=id=>document.getElementById(id);
+const PER_LEVEL=5;
+let st={level:1,count:0,struggle:{},seen:{}};
+try{Object.assign(st,JSON.parse(localStorage.getItem('eqsteps2')||'{}'))}catch(e){}
+const save=()=>{try{localStorage.setItem('eqsteps2',JSON.stringify(st))}catch(e){}};
+if(!st.ver){ // two levels were inserted before the old Level 8
+  const sh=o=>{const r={};for(const k in o)r[+k>=8?+k+2:k]=o[k];return r};
+  if(st.level>=8)st.level+=2;st.struggle=sh(st.struggle||{});st.seen=sh(st.seen||{});st.ver=3;save()}
+let capyLast=false,capyTimers=[],prob,steps,solved=false,nsPending=false,inp,busy=false,animate=false,lastReview=false,noteTimer;
+const blank=()=>({op:null,neg:false,t:[],sp:null,side:null});
+const cur=()=>steps[steps.length-1].eq;
+const cfg=()=>LEVELS[st.level-1];
+
+/* --- keypad --- */
+const ROWS=[['+','−','×','÷','(',')','⌫','↶'],['0','1','2','3','4','x','a','b'],['5','6','7','8','9','y','c','d'],['exp','fac','L','R']];
+function tap(el,fn){el.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();el.classList.add('down');
+    try{navigator.vibrate&&navigator.vibrate(6)}catch(_){}fn()});
+  ['pointerup','pointerleave','pointercancel'].forEach(t=>el.addEventListener(t,()=>el.classList.remove('down')));
+  ['click','touchend','dblclick'].forEach(t=>el.addEventListener(t,e=>{e.preventDefault();e.stopPropagation()}))}
+ROWS.forEach((row,r)=>row.forEach(k=>{const b=document.createElement('button');b.textContent=k;b.dataset.k=k;
+  let c='key';if(['+','−','×','÷'].includes(k))c+=' op';else if(k==='x'||k==='y')c+=' u';else if(/^[a-d]$/.test(k))c+=' lit lk';
+  else if(k==='('||k===')')c+=' op pk';else if(k==='⌫'||k==='↶')c+=' ctl';
+  if(r===3)c+=' tool toolrow'+(k==='L'||k==='R'?' side':'');
+  b.className=c;if(k==='↶')b.title='Undo last step';tap(b,()=>press(k));$('keys').append(b)}));
+tap($('go'),()=>press('GO'));tap($('newBtn'),()=>{if(!busy)newProblem(true)});tap($('showBtn'),showMe);
+document.addEventListener('touchmove',e=>{if(!e.target.closest('#board'))e.preventDefault()},{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault());
+LEVELS.forEach((L,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=`Level ${i+1} · ${L.name}`;$('levelSel').append(o)});
+$('levelSel').onchange=e=>{st.level=+e.target.value;st.count=0;save();newProblem(true)};
+
+/* --- sound --- */
+let actx;
+function tone(fs,type,vol,dur,gap){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const t0=actx.currentTime;
+  fs.forEach((f,i)=>{const o=actx.createOscillator(),g=actx.createGain(),t=t0+i*gap;o.type=type;o.frequency.value=f;
+    g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    o.connect(g).connect(actx.destination);o.start(t);o.stop(t+dur+.05)})}catch(e){}}
+let voiceReady=false;
+function unlockVoice(){if(voiceReady||!window.speechSynthesis)return;voiceReady=true;try{const u=new SpeechSynthesisUtterance(' ');u.volume=0;speechSynthesis.speak(u)}catch(e){}}
+document.addEventListener('pointerdown',unlockVoice,{capture:true});
+function deepVoice(text){
+  try{if(!window.speechSynthesis)throw 0;const u=new SpeechSynthesisUtterance(text);
+    const vs=speechSynthesis.getVoices().filter(v=>/^en/i.test(v.lang));
+    const pref=vs.find(v=>/male|daniel|fred|ralph|arthur|lee|aaron|guy|david|george/i.test(v.name)&&!/female/i.test(v.name))||vs[0];
+    if(pref)u.voice=pref;u.pitch=0.05;u.rate=0.72;u.volume=1;speechSynthesis.cancel();speechSynthesis.speak(u)}
+  catch(e){tone([98,73.4],'sawtooth',.12,.45,.32)}} // fallback: a low two-note "good job"
+const ping=()=>tone([880,1318.5],'sine',.3,.6,.12),buzz=()=>tone([140],'square',.05,.18,0);
+
+/* --- notes --- */
+function note(html,kind='info',ms=0){const n=$('note');n.innerHTML=html;n.className='on '+kind;clearTimeout(noteTimer);
+  if(ms)noteTimer=setTimeout(()=>{n.className=''},ms)}
+const clearNote=()=>{clearTimeout(noteTimer);$('note').className=''};
+function err(text){note(text,'err',3200);buzz();const i=$('input');i.classList.remove('shake');void i.offsetWidth;i.classList.add('shake')}
+function setGo(t,ns=false){$('go').textContent=t;$('go').classList.toggle('ns',ns)}
+
+/* --- problems & review --- */
+function newProblem(chosen){
+  let lvl=st.level,review=false;
+  if(!chosen&&st.level>1&&!lastReview&&Math.random()<.25){
+    const ws=[];for(let i=1;i<st.level;i++)ws.push(1+2*(st.struggle[i]||0));
+    let r=Math.random()*ws.reduce((a,b)=>a+b);for(let i=0;i<ws.length;i++){r-=ws[i];if(r<=0){lvl=i+1;break}}review=true}
+  lastReview=review;
+  prob={...generate(lvl),lvl,review,shown:false,tips:0,undos:0,excl:false};
+  steps=[{eq:prob.eq,label:null}];solved=false;nsPending=false;inp=blank();animate=false;
+  $('smileWrap').classList.remove('show');hideCapy();setGo('GO');clearNote();
+  const L=cfg();
+  if(!st.seen[st.level]){st.seen[st.level]=1;save();note((L.intro?L.intro+' ':'')+'Tap 💡 any time to see the next step.','info')}
+  render()}
+
+function actionHtml(a,v){if(a.type!=='op')return `<small>${a.type}</small>&nbsp;<i>${a.side}</i>`;return SYM[a.op]+'&thinsp;'+operandHtml(a.lin,v)}
+function renderInput(){let h='';
+  if(inp.sp)h=`<small>${inp.sp}</small>&nbsp;${inp.side?'<i>'+inp.side+'</i>':'…'}`;
+  else if(inp.op||inp.t.length){const tk=inp.t.map(c=>/[xy]/.test(c)?V(c):/[a-d]/.test(c)?`<i>${c}</i>`:c==='+'||c==='−'?`<span class="pm">${c}</span>`:c).join('');
+    h=(inp.op?SYM[inp.op]:'')+'&thinsp;'+(inp.neg?'(−'+tk+')':tk)}
+  $('input').innerHTML=h;
+  document.querySelectorAll('.key').forEach(b=>{const k=b.dataset.k;b.classList.toggle('sel',k===inp.op||k===inp.sp||k===inp.side)})}
+
+const ARR_L='<svg class="arr" viewBox="0 0 20 62"><path d="M17 4 C 1 18, 1 44, 15 58" marker-end="url(#ah)"/></svg>';
+const ARR_R='<svg class="arr" viewBox="0 0 20 62"><path d="M3 4 C 19 18, 19 44, 5 58" marker-end="url(#ah)"/></svg>';
+function render(){
+  const L=cfg();$('levelSel').value=st.level;
+  $('prog').innerHTML=Array.from({length:PER_LEVEL},(_,i)=>`<span class="${i<st.count?'on':''}"></span>`).join('');
+  $('chip').className=prob.review?'on':'';$('chip').textContent=prob.review?`Review · Level ${prob.lvl}`:'';
+  const PL=LEVELS[prob.lvl-1];
+  document.querySelectorAll('.lk').forEach(b=>b.classList.toggle('hide',!PL.lits));
+  document.querySelectorAll('.pk').forEach(b=>b.classList.toggle('hide',!(PL.lits||PL.paren)));
+  document.querySelectorAll('.toolrow').forEach(b=>{b.classList.toggle('gone',PL.tools===0);b.classList.toggle('hide',b.dataset.k==='fac'&&PL.tools<2)});
+  const box=$('steps'),board=$('board');box.style.padding=`${board.clientHeight/2-24}px 0`;box.innerHTML='';
+  steps.forEach((s,i)=>{const last=i===steps.length-1;
+    if(i>0){const r=document.createElement('div');r.className='row step'+(last&&animate?' new':'');
+      r.innerHTML=`<div class="lab l">${s.label.L||''}</div><div>${s.label.L?ARR_L:''}</div><div></div><div></div><div></div><div>${s.label.R?ARR_R:''}</div><div class="lab r">${s.label.R||''}</div>`;box.append(r)}
+    const r=document.createElement('div');
+    r.className='row eq'+(last?'':' past')+(last&&(solved||nsPending)?(prob.excl?' bad':' done'):'')+(last&&animate?' new':'');
+    r.innerHTML=`<div></div><div></div><div class="side l"><span class="expr">${sideHtml(s.eq.L,prob.v)}</span></div><div class="eqs">=</div><div class="side r"><span class="expr">${sideHtml(s.eq.R,prob.v)}</span></div><div></div><div></div>`;
+    box.append(r)});
+  box.querySelectorAll('.lab').forEach(el=>{let fs=16;while(el.scrollWidth>el.clientWidth+1&&fs>10){fs--;el.style.fontSize=fs+'px'}});
+  box.querySelectorAll('.side').forEach(el=>{const e=el.firstChild;let fs=23;e.style.fontSize=fs+'px';while(e.offsetWidth>el.clientWidth&&fs>11){fs--;e.style.fontSize=fs+'px'}});
+  const lr=box.lastElementChild;board.scrollTo({top:lr.offsetTop-board.clientHeight/2+lr.offsetHeight/2,behavior:'smooth'});
+  animate=false;renderInput()}
+
+/* --- input --- */
+function press(k){
+  if(busy)return;if(solved){if(k==='GO')nextAfterWin();return}
+  if(nsPending){
+    if(k==='GO'){nsPending=false;win(true)}
+    else if(k==='↶'){nsPending=false;prob.excl=false;steps.pop();prob.undos++;setGo('GO');clearNote();render()}
+    return}
+  const n=$('note');if(n.classList.contains('err'))clearNote();
+  const t=inp.t,last=t[t.length-1],open=t.filter(c=>c==='(').length>t.filter(c=>c===')').length,v=prob.v;
+  if(['+','−','×','÷'].includes(k)){
+    if(inp.sp){inp.sp=null;inp.side=null}
+    if(open&&(k==='+'||k==='−')){if(last==='+'||last==='−')t[t.length-1]=k;else if(last!=='('||k==='−')t.push(k)}
+    else if(k==='−'&&inp.op&&!t.length&&!inp.neg)inp.neg=true;
+    else inp.op=k}
+  else if(/^[0-9a-dxy]$/.test(k)){
+    if(inp.sp)return err('Choose <b>L</b> or <b>R</b> for the side.');
+    if(last===')')return err('The bracket is closed — press ⌫ to change it.');
+    if(/\d/.test(k)&&last&&/[a-dxy]/.test(last))return err('Type the number first, e.g. 3'+V(v)+'.');
+    if(/[a-d]/.test(k)&&last&&/[xy]/.test(last))return err(`Put letters before ${V(v)}, e.g. <i>b</i>${V(v)}.`);
+    if(/[xy]/.test(k)&&last&&/[xy]/.test(last))return err('One unknown per term.');
+    if(/\d/.test(k)){let j=t.length,c=0;while(j>0&&/\d/.test(t[j-1])){j--;c++}if(c>=3)return}
+    t.push(k)}
+  else if(k==='('){if(inp.sp)return;if(t.length)return err('Open the bracket before typing the expression.');t.push('(')}
+  else if(k===')'){if(!open||last==='('||last==='+'||last==='−')return err('Finish the expression inside the bracket first.');t.push(')')}
+  else if(k==='exp'||k==='fac'){inp=blank();inp.sp=k}
+  else if(k==='L'||k==='R'){if(!inp.sp)return err('Press <b>exp</b> or <b>fac</b> first, then choose the side.');inp.side=k}
+  else if(k==='⌫'){if(inp.side)inp.side=null;else if(inp.sp)inp.sp=null;else if(t.length)t.pop();else if(inp.neg)inp.neg=false;else inp.op=null}
+  else if(k==='↶'){if(steps.length>1){steps.pop();prob.undos++;inp=blank();clearNote();render()}return}
+  else if(k==='GO')return go();
+  renderInput()}
+
+function go(){
+  const v=prob.v;let a;
+  if(inp.sp){if(!inp.side)return err('Choose which side: <b>L</b> or <b>R</b>.');a={type:inp.sp,side:inp.side}}
+  else{
+    if(!inp.op)return err('Choose an operation first: + − × ÷');
+    if(!inp.t.length)return err(`Now type a number${LEVELS[prob.lvl-1].lits?', letter':''} or ${V(v)}.`);
+    let parsed;try{parsed=parseOperand(inp.t)}catch(e){return err(e)}
+    let X=parsed.lin;if(inp.neg)X=lneg(X);
+    if(parsed.us.some(u=>u!==v))return err(`This equation uses ${V(v)}, not ${V(v==='x'?'y':'x')}.`);
+    if(inp.op==='÷'&&!pzero(X.x))return err(`Dividing by ${V(v)} would put it in a denominator — try something else.`);
+    if(lzero(X)){if(inp.op==='÷')return err("You can't divide by zero.");if(inp.op==='×')return err('Multiplying by 0 makes both sides 0 — you lose the equation!');return err('Adding or subtracting 0 doesn’t change anything.')}
+    a={type:'op',op:inp.op,lin:X}}
+  const before=cur(),r=apply(before,a,v);if(typeof r==='string')return err(r);
+  steps.push(r);inp=blank();animate=true;
+  const tip=tipFor(before,r.eq,a,v);
+  if(isSolved(r.eq))finish();else if(tip){prob.tips++;note(tip,'tip')}else clearNote();
+  render()}
+
+function showMe(){
+  if(busy||solved)return;
+  if(nsPending){prob.shown=true;return press('GO')}
+  const s=nextStep(cur(),prob.v);if(!s)return;
+  busy=true;prob.shown=true;inp=blank();renderInput();
+  $('input').innerHTML=actionHtml(s.a,prob.v);note(s.say,'show');
+  setTimeout(()=>{const r=apply(cur(),s.a,prob.v);busy=false;if(typeof r==='string'){note(r,'err');return}
+    steps.push(r);animate=true;if(isSolved(r.eq))finish();render()},850)}
+
+function finish(){ // answer reached: check it against the original equation
+  const ex=excludedVal(prob.eq,cur());
+  if(!ex)return win(false);
+  prob.excl=true;nsPending=true;setGo('No solution',true);
+  note(`Check: ${V(prob.v)} = ${join(polyTerms(pc(ex)))} makes a denominator zero in the original equation, so it can’t be a solution. Tap <b>No solution</b>.`,'tip')}
+function hideCapy(){capyTimers.forEach(clearTimeout);capyTimers=[];$('capyStage').className='';$('capy').setAttribute('class','');$('bubble').className='';
+  try{window.speechSynthesis&&speechSynthesis.cancel()}catch(e){}}
+function showCapy(){
+  const c=$('capy');$('capyStage').className='on';c.setAttribute('class','');void c.getBoundingClientRect();c.setAttribute('class','walk');
+  capyTimers.push(setTimeout(()=>{c.setAttribute('class','arrived');c.style.left='calc(50% - 110px)';$('bubble').className='on';deepVoice('Good job')},3450))}
+function win(ns){
+  solved=true;setGo('NEXT ▶');
+  const capy=!prob.shown&&!capyLast&&Math.random()<1/12; // the Easter egg: roughly 1 win in 12, never twice running
+  capyLast=capy;
+  if(capy){$('capy').style.left='';showCapy()}else{ping();$('smileWrap').classList.add('show')}
+  const n=steps.length-1,lv=prob.lvl,slips=prob.tips+prob.undos+(prob.shown?2:0);
+  st.struggle[lv]=slips?Math.min(6,(st.struggle[lv]||0)+slips):Math.max(0,(st.struggle[lv]||0)-1);
+  const done=()=>st.count>=PER_LEVEL&&st.level<LEVELS.length?' Level complete 🎉':'';
+  if(prob.shown)note('That’s the worked example. Now try one yourself.','good');
+  else if(prob.review)note(ns?'Correct — no solution. Nice remembering!':`Review solved in ${n} step${n===1?'':'s'}. Nice remembering!`,'good');
+  else{st.count++;note((ns?'Correct — this equation has <b>no solution</b>.':`Solved in ${n} step${n===1?'':'s'}!`)+done(),'good')}
+  save();render()}
+function nextAfterWin(){
+  if(prob.shown)return newProblem(true);
+  if(st.count>=PER_LEVEL){if(st.level<LEVELS.length)st.level++;st.count=0;save()}
+  newProblem(false)}
+
+document.addEventListener('keydown',e=>{
+  const map={'-':'−','*':'×','/':'÷','+':'+','(':'(',')':')',Enter:'GO',Backspace:'⌫',e:'exp',f:'fac',l:'L',r:'R',u:'↶'};
+  const k=/^[0-9a-dxy]$/.test(e.key)?e.key:map[e.key];if(k){e.preventDefault();press(k)}});
+window.addEventListener('resize',()=>steps&&render());
+newProblem(true);
+}
+if(typeof module!=='undefined')module.exports={q,S,Sbr,side,T,B,Fr,Fx,apply,nextStep,isSolved,generate,sideHtml,tipFor,parseOperand,excludedVal,LEVELS,lin,pc};
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
