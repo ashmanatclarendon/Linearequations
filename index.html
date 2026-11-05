@@ -29,7 +29,7 @@ header{display:flex;align-items:center;gap:8px}
 #prog span.on{background:var(--green)}
 .icon{width:36px;height:36px;border-radius:50%;border:none;background:var(--soft);font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;color:var(--navy)}
 .icon.down{transform:scale(.92)}
-#topline{display:flex;align-items:center;justify-content:space-between;margin:12px 0 2px;min-height:46px}
+#topline{display:flex;align-items:center;justify-content:space-between;margin:6px 0 2px;min-height:46px}
 #input{min-width:150px;height:46px;background:var(--orange);border-radius:10px;display:flex;align-items:center;justify-content:flex-end;
   padding:0 14px;font:22px var(--math);white-space:nowrap;box-shadow:inset 0 -3px 0 rgba(0,0,0,.08)}
 #input small{font:14px system-ui,sans-serif}
@@ -37,6 +37,10 @@ header{display:flex;align-items:center;gap:8px}
 @keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
 #chip{font:600 12px system-ui,sans-serif;color:var(--lit);background:#f0ebfb;border-radius:999px;padding:4px 10px;display:none}
 #chip.on{display:block}
+#streak{display:flex;justify-content:flex-end;gap:12px;margin-top:6px;font:600 12px system-ui,sans-serif;color:var(--muted);white-space:nowrap}
+#streak b{font-size:14px;color:var(--navy);display:inline-block}
+#streak b.bump{animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+#streak .top.new b{color:var(--green)}
 #board{flex:1;overflow-y:auto;position:relative;scrollbar-width:none;min-height:110px;
   -webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent)}
 #board::-webkit-scrollbar{display:none}
@@ -127,6 +131,7 @@ sup{font-size:.6em}
     <button class="icon" id="showBtn" title="Show me the next step">💡</button>
     <button class="icon" id="newBtn" title="New equation">↻</button>
   </header>
+  <div id="streak"><span>Current streak <b id="curStreak">0</b></span><span class="top" id="topWrap">Top streak <b id="topStreak">0</b></span></div>
   <div id="topline"><div id="input"></div><div id="chip"></div></div>
   <div id="board"><div id="steps"></div></div>
   <div id="feedback">
@@ -153,6 +158,7 @@ sup{font-size:.6em}
   <button id="go">GO</button>
 </div>
 
+
 <script>
 /* ============================ RATIONALS ============================ */
 const gcd=(a,b)=>{a=Math.abs(a);b=Math.abs(b);while(b){[a,b]=[b,a%b]}return a};
@@ -167,6 +173,7 @@ class Q{
 }
 const q=(n,d=1)=>n instanceof Q?n:new Q(n,d);
 const Z=q(0),ONE=q(1);
+
 
 /* ===== POLYNOMIALS IN THE LITERALS a,b,c,d  —  {monomial: Q}, '' = constant ===== */
 const msort=s=>[...s].sort().join('');
@@ -199,6 +206,7 @@ function pcontent(polys){ // greatest common monomial factor
     if(letters===null)letters=[...k];else{const arr=[...k],keep=[];for(const ch of letters){const i=arr.indexOf(ch);if(i>=0){keep.push(ch);arr.splice(i,1)}}letters=keep}}
   if(!count)return pc(1);return {[letters.join('')]:q(allNeg?-n:n,d)}}
 
+
 /* ===== LINEAR IN THE UNKNOWN:  x·X + C  (X, C polynomials) ===== */
 const lin=(x,c)=>({x:toP(x),c:toP(c)});
 const ladd=(a,b)=>({x:padd(a.x,b.x),c:padd(a.c,b.c)});
@@ -209,6 +217,7 @@ const lterms=a=>nterms(a.x)+nterms(a.c);
 const lkey=L=>pkey(L.x)+';'+pkey(L.c);
 const lcomb=L=>{const r={};for(const k in L.x)r['#'+k]=L.x[k];for(const k in L.c)r[k]=L.c[k];return r};
 const lratio=(D,f)=>pratio(lcomb(D),lcomb(f));
+
 
 /* ===== A SIDE = list of parts.  part = k·(in) / (den · xden)
    den: factors free of the unknown;  xden: factors containing the unknown;
@@ -238,6 +247,7 @@ function normSide(s){const out=[];
 const side=(...parts)=>normSide(parts);
 const S=(a=0,b=0)=>side(T(a,b));
 const Sbr=(m,ia,ib,a=0,b=0)=>side(B(m,ia,ib),T(a,b));
+
 
 function sAdd(s,L){return normSide([...s,{br:false,xf:false,k:pc(1),in:L,den:[],xden:[]}])}
 function sMul(s,P){const pcst=!!pconst(P);
@@ -271,6 +281,7 @@ function sFac(s,v){
   const g=pcontent([p.in.x,p.in.c]);if(peq(g,pc(1)))return 'Those terms have no common factor.';
   return normSide([{...cl(p),br:true,k:g,in:{x:pdiv(p.in.x,g),c:pdiv(p.in.c,g)}}])}
 
+
 const hasX=s=>s.some(p=>!pzero(p.in.x)||p.xden.length);
 const alone=s=>s.length===1&&!s[0].br&&!s[0].den.length&&!s[0].xden.length&&pzero(s[0].in.c)&&peq(s[0].in.x,pc(1));
 const isSolved=e=>(alone(e.L)&&!hasX(e.R))||(alone(e.R)&&!hasX(e.L));
@@ -287,6 +298,7 @@ function excludedVal(e0,ef){ // does the final answer make a denominator in the 
   if(!val)return null;
   for(const p of [...e0.L,...e0.R])for(const f of p.xden){const fx=pconst(f.x),fc=pconst(f.c);if(fx&&fc&&fx.mul(val).add(fc).zero)return val}
   return null}
+
 
 /* ============================ RENDERING ============================ */
 const V=v=>`<i class="u">${v}</i>`;
@@ -317,6 +329,7 @@ const sideHtml=(s,v)=>join(s.flatMap(p=>partTerms(p,v)));
 function operandHtml(L,v){const t=linTerms(L,v,false);if(t.length===1)return t[0].neg?'(−'+t[0].h+')':t[0].h;return '('+join(t)+')'}
 const SYM={'+':'+','−':'−','×':'×','÷':'÷'};
 
+
 /* ============================ APPLYING A MOVE ============================ */
 function apply(eq,a,v){let L=eq.L,R=eq.R;const label={L:null,R:null};
   if(a.type==='exp'||a.type==='fac'){const s=a.side==='L'?L:R;const r=a.type==='exp'?sExp(s):sFac(s,v);
@@ -333,6 +346,7 @@ function apply(eq,a,v){let L=eq.L,R=eq.R;const label={L:null,R:null};
     label.L=label.R=SYM[a.op]+'&thinsp;'+operandHtml(X,v)}
   const e={L,R};if(tooBig(e))return 'The numbers are getting very large — try ↶ to undo.';
   return {eq:e,label}}
+
 
 /* ============================ WORKED-STEP SOLVER (for 💡) ============================ */
 const opA=(op,L)=>({type:'op',op,lin:L});
@@ -382,6 +396,7 @@ function nextStep(e,v){if(isSolved(e))return null;const X=V(v);
   const Kh=coefHtml(K);
   return {a:opA('÷',{x:{},c:K}),say:`Divide both sides by ${kc?operandHtml({x:{},c:K},v):Kh} — ${X} is being multiplied by ${Kh}.`+(kc?'':` <small>(This assumes ${Kh} ≠ 0.)</small>`)}}
 
+
 /* ============================ FEEDBACK ON COMMON SLIPS ============================ */
 function tipFor(before,after,a,v){
   if(a.type!=='op')return null;const X=V(v),Sd=xsideOf(before),Sa=xsideOf(after);
@@ -409,6 +424,7 @@ function tipFor(before,after,a,v){
       return `Allowed — but it has made fractions. Removing the ${h} first keeps things simpler. (↶ undoes)`}
     if(kz){const Ka=pconst(xcoef(after[Sd]));if((Ka&&!Ka.isInt)||after[Sd].some(p=>p.den.length))return `To get ${X} on its own, divide by its whole coefficient, ${coefHtml(K)}.`}}
   return null}
+
 
 /* ============================ PROBLEM GENERATORS ============================ */
 const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
@@ -497,6 +513,7 @@ function generate(level){const L=LEVELS[level-1];
   for(let i=0;i<50;i++){const e=L.gen();if(!isSolved(e))return {v:level===1?'x':(Math.random()<.3?'y':'x'),eq:e}}
   return {v:'x',eq:{L:S(2,1),R:S(0,7)}}}
 
+
 /* ============================ PARSING THE TYPED OPERAND ============================ */
 function parseOperand(t){let i=0;const us=[];
   function term(sign){let num='';while(i<t.length&&/\d/.test(t[i]))num+=t[i++];let mono='';while(i<t.length&&/[a-d]/.test(t[i]))mono+=t[i++];
@@ -512,11 +529,12 @@ function parseOperand(t){let i=0;const us=[];
   if(i<t.length)throw 'Type one term — or put the expression in brackets.';
   return {lin:L,us}}
 
+
 /* ============================ APP / UI ============================ */
 if(typeof document!=='undefined'){
 const $=id=>document.getElementById(id);
 const PER_LEVEL=15;
-let st={level:1,count:0,struggle:{},seen:{}};
+let st={level:1,count:0,struggle:{},seen:{},streak:0,best:0};
 try{Object.assign(st,JSON.parse(localStorage.getItem('eqsteps2')||'{}'))}catch(e){}
 const save=()=>{try{localStorage.setItem('eqsteps2',JSON.stringify(st))}catch(e){}};
 if(!st.ver){ // two levels were inserted before the old Level 8
@@ -526,6 +544,7 @@ let capyLast=false,capyTimers=[],prob,steps,solved=false,nsPending=false,inp,bus
 const blank=()=>({op:null,neg:false,t:[],sp:null,side:null});
 const cur=()=>steps[steps.length-1].eq;
 const cfg=()=>LEVELS[st.level-1];
+
 
 /* --- keypad --- */
 const ROWS=[['+','−','×','÷','(',')','⌫','↶'],['0','1','2','3','4','x','a','b'],['5','6','7','8','9','y','c','d'],['exp','fac','L','R']];
@@ -538,11 +557,12 @@ ROWS.forEach((row,r)=>row.forEach(k=>{const b=document.createElement('button');b
   else if(k==='('||k===')')c+=' op pk';else if(k==='⌫'||k==='↶')c+=' ctl';
   if(r===3)c+=' tool toolrow'+(k==='L'||k==='R'?' side':'');
   b.className=c;if(k==='↶')b.title='Undo last step';tap(b,()=>press(k));$('keys').append(b)}));
-tap($('go'),()=>press('GO'));tap($('newBtn'),()=>{if(!busy)newProblem(true)});tap($('showBtn'),showMe);
+tap($('go'),()=>press('GO'));tap($('newBtn'),()=>{if(!busy){abandon();newProblem(true)}});tap($('showBtn'),showMe);
 document.addEventListener('touchmove',e=>{if(!e.target.closest('#board'))e.preventDefault()},{passive:false});
 document.addEventListener('gesturestart',e=>e.preventDefault());
 LEVELS.forEach((L,i)=>{const o=document.createElement('option');o.value=i+1;o.textContent=`Level ${i+1} · ${L.name}`;$('levelSel').append(o)});
-$('levelSel').onchange=e=>{st.level=+e.target.value;st.count=0;save();newProblem(true)};
+$('levelSel').onchange=e=>{abandon();st.level=+e.target.value;st.count=0;save();newProblem(true)};
+
 
 /* --- sound --- */
 let actx;
@@ -561,12 +581,22 @@ function deepVoice(text){
   catch(e){tone([98,73.4],'sawtooth',.12,.45,.32)}} // fallback: a low two-note "good job"
 const ping=()=>tone([880,1318.5],'sine',.3,.6,.12),buzz=()=>tone([140],'square',.05,.18,0);
 
+
+/* --- streaks: consecutive equations solved with no hint, no coaching tip and no undo --- */
+function updateStreak(bump,isTop){
+  $('curStreak').textContent=st.streak;$('topStreak').textContent=st.best;
+  $('topWrap').classList.toggle('new',!!isTop);
+  if(bump){const c=$('curStreak');c.classList.remove('bump');void c.offsetWidth;c.classList.add('bump')}}
+function slip(){if(prob.slipped)return;prob.slipped=true;if(st.streak){st.streak=0;save();updateStreak()}}
+function abandon(){if(prob&&!solved&&!nsPending&&steps.length>1)slip()} // walking away from an equation part-way through
+
 /* --- notes --- */
 function note(html,kind='info',ms=0){const n=$('note');n.innerHTML=html;n.className='on '+kind;clearTimeout(noteTimer);
   if(ms)noteTimer=setTimeout(()=>{n.className=''},ms)}
 const clearNote=()=>{clearTimeout(noteTimer);$('note').className=''};
 function err(text){note(text,'err',3200);buzz();const i=$('input');i.classList.remove('shake');void i.offsetWidth;i.classList.add('shake')}
 function setGo(t,ns=false){$('go').textContent=t;$('go').classList.toggle('ns',ns)}
+
 
 /* --- problems & review --- */
 function newProblem(chosen){
@@ -575,12 +605,13 @@ function newProblem(chosen){
     const ws=[];for(let i=1;i<st.level;i++)ws.push(1+2*(st.struggle[i]||0));
     let r=Math.random()*ws.reduce((a,b)=>a+b);for(let i=0;i<ws.length;i++){r-=ws[i];if(r<=0){lvl=i+1;break}}review=true}
   lastReview=review;
-  prob={...generate(lvl),lvl,review,shown:false,tips:0,undos:0,excl:false};
+  prob={...generate(lvl),lvl,review,shown:false,tips:0,undos:0,excl:false,slipped:false};
   steps=[{eq:prob.eq,label:null}];solved=false;nsPending=false;inp=blank();animate=false;
   $('smileWrap').classList.remove('show');hideCapy();setGo('GO');clearNote();
   const L=cfg();
   if(!st.seen[st.level]){st.seen[st.level]=1;save();note((L.intro?L.intro+' ':'')+'Tap 💡 any time to see the next step.','info')}
   render()}
+
 
 function actionHtml(a,v){if(a.type!=='op')return `<small>${a.type}</small>&nbsp;<i>${a.side}</i>`;return SYM[a.op]+'&thinsp;'+operandHtml(a.lin,v)}
 function renderInput(){let h='';
@@ -590,10 +621,11 @@ function renderInput(){let h='';
   $('input').innerHTML=h;
   document.querySelectorAll('.key').forEach(b=>{const k=b.dataset.k;b.classList.toggle('sel',k===inp.op||k===inp.sp||k===inp.side)})}
 
+
 const ARR_L='<svg class="arr" viewBox="0 0 20 62"><path d="M17 4 C 1 18, 1 44, 15 58" marker-end="url(#ah)"/></svg>';
 const ARR_R='<svg class="arr" viewBox="0 0 20 62"><path d="M3 4 C 19 18, 19 44, 5 58" marker-end="url(#ah)"/></svg>';
 function render(){
-  const L=cfg();$('levelSel').value=st.level;
+  const L=cfg();$('levelSel').value=st.level;updateStreak();
   $('prog').innerHTML=Array.from({length:PER_LEVEL},(_,i)=>`<span class="${i<st.count?'on':''}"></span>`).join('');
   $('chip').className=prob.review?'on':'';$('chip').textContent=prob.review?`Review · Level ${prob.lvl}`:'';
   const PL=LEVELS[prob.lvl-1];
@@ -613,12 +645,13 @@ function render(){
   const lr=box.lastElementChild;board.scrollTo({top:lr.offsetTop-board.clientHeight/2+lr.offsetHeight/2,behavior:'smooth'});
   animate=false;renderInput()}
 
+
 /* --- input --- */
 function press(k){
   if(busy)return;if(solved){if(k==='GO')nextAfterWin();return}
   if(nsPending){
     if(k==='GO'){nsPending=false;win(true)}
-    else if(k==='↶'){nsPending=false;prob.excl=false;steps.pop();prob.undos++;setGo('GO');clearNote();render()}
+    else if(k==='↶'){nsPending=false;prob.excl=false;steps.pop();prob.undos++;slip();setGo('GO');clearNote();render()}
     return}
   const n=$('note');if(n.classList.contains('err'))clearNote();
   const t=inp.t,last=t[t.length-1],open=t.filter(c=>c==='(').length>t.filter(c=>c===')').length,v=prob.v;
@@ -640,9 +673,10 @@ function press(k){
   else if(k==='exp'||k==='fac'){inp=blank();inp.sp=k}
   else if(k==='L'||k==='R'){if(!inp.sp)return err('Press <b>exp</b> or <b>fac</b> first, then choose the side.');inp.side=k}
   else if(k==='⌫'){if(inp.side)inp.side=null;else if(inp.sp)inp.sp=null;else if(t.length)t.pop();else if(inp.neg)inp.neg=false;else inp.op=null}
-  else if(k==='↶'){if(steps.length>1){steps.pop();prob.undos++;inp=blank();clearNote();render()}return}
+  else if(k==='↶'){if(steps.length>1){steps.pop();prob.undos++;slip();inp=blank();clearNote();render()}return}
   else if(k==='GO')return go();
   renderInput()}
+
 
 function go(){
   const v=prob.v;let a;
@@ -659,17 +693,19 @@ function go(){
   const before=cur(),r=apply(before,a,v);if(typeof r==='string')return err(r);
   steps.push(r);inp=blank();animate=true;
   const tip=tipFor(before,r.eq,a,v);
-  if(isSolved(r.eq))finish();else if(tip){prob.tips++;note(tip,'tip')}else clearNote();
+  if(isSolved(r.eq))finish();else if(tip){prob.tips++;slip();note(tip,'tip')}else clearNote();
   render()}
+
 
 function showMe(){
   if(busy||solved)return;
-  if(nsPending){prob.shown=true;return press('GO')}
+  if(nsPending){prob.shown=true;slip();return press('GO')}
   const s=nextStep(cur(),prob.v);if(!s)return;
-  busy=true;prob.shown=true;inp=blank();renderInput();
+  busy=true;prob.shown=true;slip();inp=blank();renderInput();
   $('input').innerHTML=actionHtml(s.a,prob.v);note(s.say,'show');
   setTimeout(()=>{const r=apply(cur(),s.a,prob.v);busy=false;if(typeof r==='string'){note(r,'err');return}
     steps.push(r);animate=true;if(isSolved(r.eq))finish();render()},850)}
+
 
 function finish(){ // answer reached: check it against the original equation
   const ex=excludedVal(prob.eq,cur());
@@ -688,15 +724,20 @@ function win(ns){
   if(capy){$('capy').style.left='';const a=$('capyAudio');try{a.pause();a.currentTime=0;const p=a.play();if(p&&p.catch)p.catch(()=>{})}catch(e){}showCapy()}else{ping();$('smileWrap').classList.add('show')}
   const n=steps.length-1,lv=prob.lvl,slips=prob.tips+prob.undos+(prob.shown?2:0);
   st.struggle[lv]=slips?Math.min(6,(st.struggle[lv]||0)+slips):Math.max(0,(st.struggle[lv]||0)-1);
+  let newTop=false;
+  if(!prob.slipped){st.streak++;if(st.streak>st.best){st.best=st.streak;newTop=st.streak>1}}
+  updateStreak(!prob.slipped,newTop);
+  const topMsg=newTop?' New top streak!':'';
   const done=()=>st.count>=PER_LEVEL&&st.level<LEVELS.length?' Level complete 🎉':'';
   if(prob.shown)note('That’s the worked example. Now try one yourself.','good');
-  else if(prob.review)note(ns?'Correct — no solution. Nice remembering!':`Review solved in ${n} step${n===1?'':'s'}. Nice remembering!`,'good');
-  else{st.count++;note((ns?'Correct — this equation has <b>no solution</b>.':`Solved in ${n} step${n===1?'':'s'}!`)+done(),'good')}
+  else if(prob.review)note((ns?'Correct — no solution. Nice remembering!':`Review solved in ${n} step${n===1?'':'s'}. Nice remembering!`)+topMsg,'good');
+  else{st.count++;note((ns?'Correct — this equation has <b>no solution</b>.':`Solved in ${n} step${n===1?'':'s'}!`)+topMsg+done(),'good')}
   save();render()}
 function nextAfterWin(){
   if(prob.shown)return newProblem(true);
   if(st.count>=PER_LEVEL){if(st.level<LEVELS.length)st.level++;st.count=0;save()}
   newProblem(false)}
+
 
 document.addEventListener('keydown',e=>{
   const map={'-':'−','*':'×','/':'÷','+':'+','(':'(',')':')',Enter:'GO',Backspace:'⌫',e:'exp',f:'fac',l:'L',r:'R',u:'↶'};
